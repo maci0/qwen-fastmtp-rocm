@@ -151,7 +151,7 @@ rocm-smi -d 0 --setperflevel high
   --spec-type draft-mtp \
   --spec-draft-n-max 3 \
   --spec-draft-p-min 0 \
-  --ctx-size 32768 \
+  --ctx-size 65536 \
   --parallel 1 \
   --batch-size 2048 \
   --ubatch-size 512 \
@@ -166,6 +166,11 @@ rocm-smi -d 0 --setperflevel high
   --host 127.0.0.1 \
   --port 8080
 ```
+
+Context sizing and VRAM footprints on 24 GB cards:
+- `--ctx-size 32768`: 20.8 GiB VRAM allocation.
+- `--ctx-size 65536`: 23.3 GiB VRAM allocation (recommended for maximum native single-slot depth).
+- `--ctx-size 131072 --cache-type-k q8_0 --cache-type-v q8_0`: 23.8 GiB VRAM allocation.
 
 ### 5. Benchmark
 
