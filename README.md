@@ -168,9 +168,12 @@ rocm-smi -d 0 --setperflevel high
 ```
 
 Context sizing and VRAM footprints on 24 GB cards:
-- `--ctx-size 32768`: 20.8 GiB VRAM allocation.
-- `--ctx-size 65536`: 23.3 GiB VRAM allocation (recommended for maximum native single-slot depth).
-- `--ctx-size 131072 --cache-type-k q8_0 --cache-type-v q8_0`: 23.8 GiB VRAM allocation.
+- `--ctx-size 32768`: 20.8 GiB VRAM allocation (baseline).
+- `--ctx-size 65536`: 23.3 GiB VRAM allocation (full F16 precision).
+- `--ctx-size 81920 --cache-type-k f16 --cache-type-v q8_0`: 22.8 to 23.4 GiB VRAM allocation (asymmetric KV: preserves 16-bit key precision for attention routing while halving value footprint).
+- `--ctx-size 98304 --cache-type-k f16 --cache-type-v q4_0`: 23.5 GiB VRAM allocation (96K context with full key precision).
+- `--ctx-size 106496 --cache-type-k q8_0 --cache-type-v q8_0`: 23.3 GiB VRAM allocation (symmetric 8-bit, 104K context).
+- `--ctx-size 131072 --cache-type-k q8_0 --cache-type-v q4_0`: 23.2 GiB VRAM allocation (maximum 128K context depth).
 
 ### 5. Benchmark
 
