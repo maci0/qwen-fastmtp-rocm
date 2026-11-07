@@ -65,6 +65,23 @@ Measured on a single AMD Radeon RX 7900 XTX (Navi 31, 24 GB, `gfx1100`, ROCm 7.2
 
 Draft acceptance reaches 89.2% on structured code and repetitive text blocks, producing 3.68 accepted tokens per forward verification step.
 
+### MTP Draft Depth Sweep (Coding Workload)
+
+Sweeping `--spec-draft-n-max` across Python, Rust, and TypeScript implementation tasks:
+
+| Draft Depth (`n_max`) | Decode Speed (Avg) | Peak Code Speed | Acceptance Rate |
+| :---: | :---: | :---: | :---: |
+| 1 | 44.78 t/s | 45.95 t/s | 69.0% |
+| 2 | 34.09 t/s | 49.40 t/s | 59.0% |
+| **3 (Optimal)** | **48.89 t/s** | **56.78 t/s** | **52.1%** |
+| 4 | 40.79 t/s | 45.09 t/s | 36.7% |
+| 5 | 37.94 t/s | 41.81 t/s | 33.1% |
+| 6 | 34.52 t/s | 37.36 t/s | 28.4% |
+| 7 | 32.51 t/s | 36.48 t/s | 26.0% |
+| 8 | 48.18 t/s | 53.47 t/s | 24.2% |
+
+Depth 3 strikes the best balance between draft speculative length and verification overhead. Higher depths (4 to 7) suffer from probability distribution divergence, spending verification passes on rejected tokens.
+
 ```mermaid
 xychart-beta
     title "Decode Throughput on RX 7900 XTX (tokens/second)"
