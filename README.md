@@ -2,6 +2,8 @@
 
 Reproducible recipe and build configuration for running Qwen 3.8 27B with HauhauCS FastMTP speculative decoding on AMD Radeon RX 7900 XTX (24 GB) under ROCm.
 
+![Benchmark Comparison](assets/benchmark_comparison.png)
+
 ## Background
 
 On an AMD Radeon RX 7900 XTX (24 GB VRAM, 960 GB/s memory bandwidth), pure autoregressive generation with a 27B model at Q4 (~17 GB) is memory-bandwidth bound to ~34 to 40 tokens/s:
@@ -18,6 +20,36 @@ check_tensor_dims: tensor 'output.weight' has wrong shape; expected 5120, 248320
 
 The patch in `patches/HauhauCS-FastMTP-llama.cpp.patch` adds `d2t` draft-vocabulary trimming and logit scattering to `src/models/qwen35.cpp`, enabling speculative drafting at depth 3 to 5 with 80% to 92% acceptance.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph Target["Target Model (Qwen 3.8 27B Q4_K_P: 17.9 GB)"]
+        Context["Prompt / Previous Tokens"] --> TargetKV["Target KV Cache (F16)"]
+        TargetKV --> TargetLayers["64 Layers (Forward Step)"]
+    end
+
+    subgraph Draft["FastMTP Sidecar (FastMTP-32K.gguf: 862 MB)"]
+        TargetLayers -.-> MTPHeads["MTP Heads (Depth K=3)"]
+        MTPHeads --> DraftTokens["Propose 3 Candidate Tokens (32K Vocab)"]
+    end
+
+    subgraph Patch["d2t Patch Logic (src/models/qwen35.cpp)"]
+        DraftTokens --> D2TMap["d2t Token Map (32K to 248K)"]
+        D2TMap --> LogitScatter["Scatter Logits to 248K Space"]
+    end
+
+    subgraph Verification["Verification Phase"]
+        LogitScatter --> TargetVerify["Parallel Verification Pass"]
+        TargetVerify --> AcceptanceFilter{"Acceptance Check"}
+        AcceptanceFilter -- "Match (80-92%)" --> Accept["Emit 3 to 4 Tokens per Weight Read"]
+        AcceptanceFilter -- "Mismatch" --> Reject["Emit Verified Prefix + Resume"]
+    end
+
+    Accept --> Context
+    Reject --> Context
+```
+
 ## Measured Benchmarks
 
 Measured on a single AMD Radeon RX 7900 XTX (Navi 31, 24 GB, `gfx1100`, ROCm 7.2):
@@ -32,6 +64,14 @@ Measured on a single AMD Radeon RX 7900 XTX (Navi 31, 24 GB, `gfx1100`, ROCm 7.2
 | VRAM Usage | 16.7 GB | 22.6 GB / 24.5 GB | 22.6 GB / 24.5 GB |
 
 Draft acceptance reaches 89.2% on structured code and repetitive text blocks, producing 3.68 accepted tokens per forward verification step.
+
+```mermaid
+xychart-beta
+    title "Decode Throughput on RX 7900 XTX (tokens/second)"
+    x-axis ["Baseline (No MTP)", "FastMTP (Reasoning)", "FastMTP (Code)", "FastMTP (Boost)", "FastMTP (Peak)"]
+    y-axis "Tokens/s" 0 --> 160
+    bar [34.3, 48.0, 70.3, 110.0, 151.0]
+```
 
 ## Prerequisites
 
@@ -150,11 +190,14 @@ systemctl --user status qwen-uncensored
 
 ```
 .
+├── assets/
+│   └── benchmark_comparison.png           # High-resolution benchmark chart
 ├── patches/
 │   └── HauhauCS-FastMTP-llama.cpp.patch   # d2t vocab trim and logit scatter
 ├── scripts/
 │   ├── bench.py                           # Streaming TTFT and decode throughput tester
-│   └── build.sh                           # Clone, patch, and build helper
+│   ├── build.sh                           # Clone, patch, and build helper
+│   └── generate_charts.py                 # Matplotlib diagram generator
 ├── systemd/
 │   └── qwen-uncensored.service            # Systemd user service unit
 └── README.md
