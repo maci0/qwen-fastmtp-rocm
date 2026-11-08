@@ -211,6 +211,44 @@ systemctl --user enable --now qwen-uncensored
 systemctl --user status qwen-uncensored
 ```
 
+## OpenCode Configuration
+
+Add the provider definition to `~/.config/opencode/opencode.jsonc` under `providers` to switch between full chain-of-thought reasoning and zero-latency direct generation:
+
+```jsonc
+"qwen-local": {
+  "npm": "@ai-sdk/openai-compatible",
+  "name": "Qwen Local (FastMTP)",
+  "options": {
+    "baseURL": "http://127.0.0.1:8080/v1"
+  },
+  "models": {
+    "qwen3.8-27b-uncensored": {
+      "name": "Qwen 3.8 27B Uncensored (FastMTP ROCm)",
+      "attachment": true,
+      "reasoning": true,
+      "tool_call": true,
+      "limit": { "context": 106496, "output": 16384 },
+      "cost": { "input": 0, "output": 0 }
+    },
+    "qwen3.8-27b-uncensored-no-think": {
+      "name": "Qwen 3.8 27B Uncensored (No Think)",
+      "attachment": true,
+      "reasoning": false,
+      "tool_call": true,
+      "body": {
+        "reasoning_effort": "none",
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "limit": { "context": 106496, "output": 16384 },
+      "cost": { "input": 0, "output": 0 }
+    }
+  }
+}
+```
+
 ## Repository Structure
 
 ```
